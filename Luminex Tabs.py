@@ -5,9 +5,10 @@ from tkinter import messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from sys import exit
 from os.path import basename, splitext
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, colors
 from openpyxl.styles.borders import Border, Side
+from openpyxl.utils import get_column_letter
 
 ##################
 # Global variables
@@ -17,14 +18,15 @@ root = tk.Tk()
 
 def main():
     file, filename = get_file()
-    wb = load_workbook(filename)
+    wb = Workbook()
+    wb = conv_to_xlsx(file, wb)
     wb1 = split_tabs(wb)
     make_plate_layout(wb1)
     make_cv_table(wb1)
     save_file(file, filename, wb1)
 
 
-# Gets XLSX input file from User
+# Gets CSV input file from User
 def get_file():
     global root
     root.withdraw()
@@ -33,10 +35,10 @@ def get_file():
     while not success:
         try:
             filename = askopenfilename(title='Choose your data files',
-                                       multiple=False, filetypes=(('XLSX Files', '*.xlsx'), ('All Files', '*.*')))
+                                       multiple=False, filetypes=(('CSV Files', '*.csv'), ('All Files', '*.*')))
             if not filename:
                 exit()
-            elif not filename.endswith('xlsx'):
+            elif not filename.endswith('csv'):
                 success = False
                 messagebox.showerror(message="Invalid Filetype.",
                                      title="Failure")
@@ -71,6 +73,19 @@ def save_file(file, filename, wb):
 
     if not dest_filename:
         exit()
+
+
+def conv_to_xlsx(file, wb):
+    # Converts file from type CSV to type XLSX to use Openpxyl module
+    csv.register_dialect('comma', delimiter=',')
+    reader = csv.reader(file, dialect='comma')
+    ws1 = wb.worksheets[0]
+    ws1.title = 'RAW data'
+    for row_index, row in enumerate(reader):
+        for column_index, cell in enumerate(row):
+            column_letter = get_column_letter((column_index + 1))
+            ws1['%s%s' % (column_letter, (row_index + 1))].value = cell
+    return wb
 
 
 # Divides the huge chunk of data into easier to read, separate sheets
@@ -120,8 +135,17 @@ def split_tabs(wb):
 
 # Creates Plate Layout sheet
 def make_plate_layout(wb):
+
+    ws = wb.worksheets[1]
+    arr = []
+    for i in range(3, ws.max_row):
+        arr.append(ws.cell(row = i, column = 2).value)
+
+    max_col = int(len(arr)/8) + 2
+
     plate_layout = wb.create_sheet()
     plate_layout.title = 'Plate Layout'
+
     # Style
     font = Font(name='Verdana', size=12)
     bold_font = Font(name='Verdana', size=14, bold=True)
@@ -129,7 +153,7 @@ def make_plate_layout(wb):
                          top=Side(style='thin'), bottom=Side(style='thin'))
     for i in range(1, 10):
         plate_layout.row_dimensions[i].height = 20
-        for j in range(1, 14):
+        for j in range(1, max_col):
             cell = plate_layout.cell(row=i, column=j)
             cell.font = font
             cell.alignment = Alignment(horizontal='center')
@@ -138,22 +162,17 @@ def make_plate_layout(wb):
         cell = plate_layout.cell(row=i, column=1)
         cell.font = bold_font
         cell.value = chr(i + 63)
-    for j in range(2, 14):
+    for j in range(2, max_col):
         cell = plate_layout.cell(row=1, column=j)
         cell.font = bold_font
         cell.value = j - 1
         plate_layout.column_dimensions[chr(j + 64)].width = 20
 
     # Fills in Plate Layout sheet
-    ws = wb.worksheets[1]
-    arr = []
-    for i in range(3, ws.max_row + 1):
-        arr.append(ws.cell(row = i, column = 2).value)
-
     counter = 0
-    for j in range(2, 14):
+    for j in range(2, max_col):
         for i in range(2, 10):
-            cell = plate_layout.cell(row = i, column = j)
+            cell = plate_layout.cell(row=i, column=j)
             cell.value = arr[counter]
             cell.alignment = Alignment(horizontal='center')
             counter += 1
@@ -207,6 +226,8 @@ def make_cv_table(wb):
                 leave = True
                 break
             p2 = ws.cell(row=i+1, column=j).value
+            p1 = float(p1)
+            p2 = float(p2)
             avg = (p1 + p2) / 2.0
             mean.append(avg)
             p1 = abs(p1 - avg)
