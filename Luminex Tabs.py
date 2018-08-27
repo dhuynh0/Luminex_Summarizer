@@ -137,6 +137,10 @@ def split_tabs(wb):
 def make_plate_layout(wb):
 
     ws = wb.worksheets[1]
+    # Finds starting number
+    s = ws.cell(row=3, column=1).value
+    num = int(s[-2:-1])
+
     arr = []
     for i in range(3, ws.max_row):
         arr.append(ws.cell(row = i, column = 2).value)
@@ -165,7 +169,8 @@ def make_plate_layout(wb):
     for j in range(2, max_col):
         cell = plate_layout.cell(row=1, column=j)
         cell.font = bold_font
-        cell.value = j - 1
+        cell.value = num
+        num += 1
         plate_layout.column_dimensions[chr(j + 64)].width = 20
 
     # Fills in Plate Layout sheet
@@ -190,14 +195,17 @@ def make_cv_table(wb):
         if ws.cell(row=2, column=j).value == 'Total Events':
             max_col = j
 
-    # Column width and titles
+    # Column titles, font, and alignment
     bold_font = Font(bold=True)
     for j in range(1, max_col - 1):
         cell = cv_table.cell(row=1, column=j)
         cell.value = ws.cell(row=2, column=j+1).value
         cell.font = bold_font
         cell.alignment = Alignment(horizontal='center')
-        cv_table.column_dimensions[chr(j+64)].width = 20
+
+    # Column width dimensions
+    for column_cells in cv_table.columns:
+        cv_table.column_dimensions[column_cells[0].column].width = 20
 
     # Names array
     names = []
@@ -213,51 +221,104 @@ def make_cv_table(wb):
         cv_table.cell(row=i, column=1).value = names[i-2]
         cv_table.cell(row=i, column=1).font = bold_font
 
-    # Calculates Std Dev and Mean
+    # Calculates Std Dev and Mean (3 Cases: immediate duplicates, 7-gap duplicates, and no duplicates)
     std_dev = []
     mean = []
     leave = False
-    for j in range(3, max_col):
-        if leave:
-            break
-        for i in range(3, ws.max_row, 2):
-            p1 = ws.cell(row=i, column=j).value
-            if p1 is None:
-                leave = True
+
+    # Immediate duplicates
+    if ws.cell(row=3, column=2).value == ws.cell(row=4, column=2).value:
+        for j in range(3, max_col):
+            if leave:
                 break
-            p2 = ws.cell(row=i+1, column=j).value
-            p1 = float(p1)
-            p2 = float(p2)
-            avg = (p1 + p2) / 2.0
-            mean.append(avg)
-            p1 = abs(p1 - avg)
-            p2 = abs(p2 - avg)
-            p1 *= p1
-            p2 *= p2
-            p3 = math.sqrt(p1 + p2)
-            std_dev.append(p3)
+            for i in range(3, ws.max_row, 2):
+                p1 = ws.cell(row=i, column=j).value
+                if p1 is None:
+                    leave = True
+                    break
+                p2 = ws.cell(row=i + 1, column=j).value
+                p1 = float(p1)
+                p2 = float(p2)
+                avg = (p1 + p2) / 2.0
+                mean.append(avg)
+                p1 = abs(p1 - avg)
+                p2 = abs(p2 - avg)
+                p1 *= p1
+                p2 *= p2
+                p3 = math.sqrt(p1 + p2)
+                std_dev.append(p3)
 
-    # Calculates and fills in %CV array
-    cv = []
-    for i in range(0, len(std_dev)):
-        x = std_dev[i]/mean[i]
-        x *= 100
-        x = round(x, 2)
-        cv.append(x)
+        # Calculates and fills in %CV array
+        cv = []
+        for i in range(0, len(std_dev)):
+            x = std_dev[i] / mean[i]
+            x *= 100
+            x = round(x, 2)
+            cv.append(x)
 
-    # Fills in %CV into the sheet
-    yellow_fill = PatternFill('solid', fgColor=colors.YELLOW)
-    counter = 0
-    for j in range(2, max_col + 1):
-        for i in range(2, cv_table.max_row + 1):
-            if counter >= len(cv):
-                pass
-            else:
-                cell = cv_table.cell(row=i, column=j)
-                cell.value = cv[counter]
-                if cell.value == 0:
-                    cell.fill = yellow_fill
-                counter += 1
+        # Fills in %CV into the sheet
+        yellow_fill = PatternFill('solid', fgColor=colors.YELLOW)
+        counter = 0
+        for j in range(2, max_col + 1):
+            for i in range(2, cv_table.max_row + 1):
+                if counter >= len(cv):
+                    pass
+                else:
+                    cell = cv_table.cell(row=i, column=j)
+                    cell.value = cv[counter]
+                    if cell.value == 0:
+                        cell.fill = yellow_fill
+                    counter += 1
+
+    # 7-gap duplicates
+    elif ws.cell(row=3, column=2).value == ws.cell(row=11, column=2).value:
+        for j in range(3, max_col):
+            if leave:
+                break
+            visited = []
+            for x in range(3, ws.max_row):
+                visited.append(0)
+            for i in range(3, ws.max_row):
+                p1 = ws.cell(row=i, column=j).value
+                if p1 is None:
+                    leave = True
+                    break
+                if visited[i-3] == 0:
+                    p2 = ws.cell(row=i+8, column=j).value
+                    visited[i-3] = 1
+                    visited[i+5] = 1
+                    p1 = float(p1)
+                    p2 = float(p2)
+                    avg = (p1 + p2) / 2.0
+                    mean.append(avg)
+                    p1 = abs(p1 - avg)
+                    p2 = abs(p2 - avg)
+                    p1 *= p1
+                    p2 *= p2
+                    p3 = math.sqrt(p1 + p2)
+                    std_dev.append(p3)
+
+        # Calculates and fills in %CV array
+        cv = []
+        for i in range(0, len(std_dev)):
+            x = std_dev[i] / mean[i]
+            x *= 100
+            x = round(x, 2)
+            cv.append(x)
+
+        # Fills in %CV into the sheet
+        yellow_fill = PatternFill('solid', fgColor=colors.YELLOW)
+        counter = 0
+        for j in range(2, max_col + 1):
+            for i in range(2, cv_table.max_row + 1):
+                if counter >= len(cv):
+                    pass
+                else:
+                    cell = cv_table.cell(row=i, column=j)
+                    cell.value = cv[counter]
+                    if cell.value == 0:
+                        cell.fill = yellow_fill
+                    counter += 1
 
     # Border
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
