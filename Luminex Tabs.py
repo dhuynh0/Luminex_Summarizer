@@ -3,6 +3,7 @@ import math
 import tkinter as tk
 from tkinter import messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter import *
 from sys import exit
 from os.path import basename, splitext
 from openpyxl import Workbook
@@ -23,6 +24,7 @@ def main():
     wb1 = split_tabs(wb)
     make_plate_layout(wb1)
     make_cv_table(wb1)
+    choose_tabs(wb1)
     save_file(file, filename, wb1)
 
 
@@ -80,7 +82,7 @@ def conv_to_xlsx(file, wb):
     csv.register_dialect('comma', delimiter=',')
     reader = csv.reader(file, dialect='comma')
     ws1 = wb.worksheets[0]
-    ws1.title = 'RAW data'
+    ws1.title = 'Raw data'
     for row_index, row in enumerate(reader):
         for column_index, cell in enumerate(row):
             column_letter = get_column_letter((column_index + 1))
@@ -99,7 +101,7 @@ def split_tabs(wb):
     for i in range(1, max_row + 1):
         for j in range(1, max_col + 1):
             wb2.worksheets[0].cell(row=i, column=j).value = ws.cell(row=i, column=j).value
-    wb2.worksheets[0].title = 'RAW Data'
+    wb2.worksheets[0].title = 'Raw Data'
 
     # Creates a sheet for every DataType
     counter = 1
@@ -138,7 +140,7 @@ def split_tabs(wb):
             if cell.value == 'NaN':
                 cell.font = red_font
 
-    # Resize columns of all worksheets except RAW Data worksheet
+    # Resize columns of all worksheets except Raw Data worksheet
     for sheet in wb2.worksheets:
         if sheet is not wb2.worksheets[0]:
             for column_cells in sheet.columns:
@@ -345,6 +347,35 @@ def make_cv_table(wb):
     for j in range(1, max_col - 1):
         for i in range(1, cv_table.max_row + 1):
             cv_table.cell(row=i, column=j).border = thin_border
+
+
+# Checkbox interface to allow user to choose which sheets they want
+def choose_tabs(wb):
+    names = []
+    for sheet in wb.worksheets:
+        names.append(sheet.title)
+    master = Toplevel()
+
+    def var_states():
+        for x in range(0, len(checked)):
+            if checked[x].get() == 0:
+                del wb[names[x]]
+        master.quit()
+
+    Label(master, text="Select desired sheets:", anchor=CENTER).grid(row=0, sticky=W)
+    checked = []
+    for i in range(0, len(names)):
+        var = IntVar()
+        # Brendan's specified pre-selected sheets
+        if (names[i] == 'Raw Data' or names[i] == 'Median' or names[i] == 'Net MFI' or names[i] == 'Count' or
+                names[i] == 'Result' or names[i] == 'Avg Net MFI' or names[i] == 'Avg Result' or
+                names[i] == '% Recovery' or names[i] == 'Standard Expected Concentration' or
+                names[i] == 'Plate Layout' or names[i] == '%CV Table'):
+            var.set(1)
+        Checkbutton(master, text=names[i], variable=var).grid(row=i+1, sticky=W)
+        checked.append(var)
+    Button(master, text='Next', command=var_states).grid(row=len(names)+1, column=1, sticky=W, padx=0.5, pady=4)
+    master.mainloop()
 
 
 if __name__ == '__main__':
