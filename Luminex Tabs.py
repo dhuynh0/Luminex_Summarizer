@@ -114,21 +114,40 @@ def split_tabs(wb):
             counter += 1
 
     # Fills in all but one DataType sheet with corresponding data
+    red_font = Font(color=colors.RED)
+
     for i in range(0, len(arr) - 1):
         row_num = 0
+        sheet = wb2.worksheets[i+1]
         for x in range(arr[i], arr[i + 1]):
             row_num += 1
             for y in range(1, max_col + 1):
-                sheet = wb2.worksheets[i + 1]
-                sheet.cell(row=row_num, column=y).value = ws.cell(row=x, column=y).value
+                cell = sheet.cell(row=row_num, column=y)
+                cell.value = ws.cell(row=x, column=y).value
+                if cell.value == 'NaN':
+                    cell.font = red_font
 
     # Fills in the last Data type sheet with corresponding data (may be a better way to do this)
     row_num = 0
     for x in range(arr[len(arr) - 1], max_row + 1):
         row_num += 1
+        sheet = wb2.worksheets[len(arr)]
         for y in range(1, max_col):
-            sheet = wb2.worksheets[len(arr)]
-            sheet.cell(row=row_num, column=y).value = ws.cell(row=x, column=y).value
+            cell = sheet.cell(row=row_num, column=y)
+            cell.value = ws.cell(row=x, column=y).value
+            if cell.value == 'NaN':
+                cell.font = red_font
+
+    # Resize columns of all worksheets except RAW Data worksheet
+    for sheet in wb2.worksheets:
+        if sheet is not wb2.worksheets[0]:
+            for column_cells in sheet.columns:
+                def as_text(value):
+                    if value is None:
+                        return ""
+                    return str(value)
+                length = max(len(as_text(cell.value)) for cell in column_cells) + 3
+                sheet.column_dimensions[column_cells[0].column].width = length
 
     return wb2
 
