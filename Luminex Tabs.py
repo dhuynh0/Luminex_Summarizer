@@ -321,7 +321,7 @@ def make_cv_table(wb):
                     # For some sample names with no duplicates
                     else:
                         visited[i-3] = 1
-                        std_dev.append(999)
+                        std_dev.append(100)
                         mean.append(1)
 
         # Calculates and fills in %CV array
@@ -346,7 +346,7 @@ def make_cv_table(wb):
                     if cell.value == 0:
                         cell.fill = yellow_fill
                     # No real %CV value
-                    if cell.value == 999:
+                    if cell.value == 10000:
                         cell.fill = red_fill
                     counter += 1
 
