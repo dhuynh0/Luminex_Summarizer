@@ -250,24 +250,26 @@ def make_cv_table(wb):
     # Immediate duplicates
     if ws.cell(row=3, column=2).value == ws.cell(row=4, column=2).value:
         for j in range(3, max_col):
-            if leave:
-                break
             for i in range(3, ws.max_row, 2):
-                p1 = ws.cell(row=i, column=j).value
-                if p1 is None:
-                    leave = True
-                    break
-                p2 = ws.cell(row=i + 1, column=j).value
-                p1 = float(p1)
-                p2 = float(p2)
-                avg = (p1 + p2) / 2.0
-                mean.append(avg)
-                p1 = abs(p1 - avg)
-                p2 = abs(p2 - avg)
-                p1 *= p1
-                p2 *= p2
-                p3 = math.sqrt(p1 + p2)
-                std_dev.append(p3)
+                if ws.cell(row=i, column=2).value == ws.cell(row=i+1, column=2).value:
+                    p1 = ws.cell(row=i, column=j).value
+                    if p1 is None:
+                        break
+                    p2 = ws.cell(row=i + 1, column=j).value
+                    p1 = float(p1)
+                    p2 = float(p2)
+                    avg = (p1 + p2) / 2.0
+                    mean.append(avg)
+                    p1 = abs(p1 - avg)
+                    p2 = abs(p2 - avg)
+                    p1 *= p1
+                    p2 *= p2
+                    p3 = math.sqrt(p1 + p2)
+                    std_dev.append(p3)
+                # For some sample names with no duplicates
+                else:
+                    std_dev.append(999)
+                    mean.append(1)
 
         # Calculates and fills in %CV array
         cv = []
@@ -294,30 +296,33 @@ def make_cv_table(wb):
     # 7-gap duplicates
     elif ws.cell(row=3, column=2).value == ws.cell(row=11, column=2).value:
         for j in range(3, max_col):
-            if leave:
-                break
             visited = []
             for x in range(3, ws.max_row):
                 visited.append(0)
             for i in range(3, ws.max_row):
                 p1 = ws.cell(row=i, column=j).value
                 if p1 is None:
-                    leave = True
                     break
                 if visited[i-3] == 0:
-                    p2 = ws.cell(row=i+8, column=j).value
-                    visited[i-3] = 1
-                    visited[i+5] = 1
-                    p1 = float(p1)
-                    p2 = float(p2)
-                    avg = (p1 + p2) / 2.0
-                    mean.append(avg)
-                    p1 = abs(p1 - avg)
-                    p2 = abs(p2 - avg)
-                    p1 *= p1
-                    p2 *= p2
-                    p3 = math.sqrt(p1 + p2)
-                    std_dev.append(p3)
+                    if ws.cell(row=i, column=2).value == ws.cell(row=i+8, column=2).value:
+                        p2 = ws.cell(row=i+8, column=j).value
+                        visited[i-3] = 1
+                        visited[i+5] = 1
+                        p1 = float(p1)
+                        p2 = float(p2)
+                        avg = (p1 + p2) / 2.0
+                        mean.append(avg)
+                        p1 = abs(p1 - avg)
+                        p2 = abs(p2 - avg)
+                        p1 *= p1
+                        p2 *= p2
+                        p3 = math.sqrt(p1 + p2)
+                        std_dev.append(p3)
+                    # For some sample names with no duplicates
+                    else:
+                        visited[i-3] = 1
+                        std_dev.append(999)
+                        mean.append(1)
 
         # Calculates and fills in %CV array
         cv = []
@@ -329,6 +334,7 @@ def make_cv_table(wb):
 
         # Fills in %CV into the sheet
         yellow_fill = PatternFill('solid', fgColor=colors.YELLOW)
+        red_fill = PatternFill('solid', fgColor=colors.RED)
         counter = 0
         for j in range(2, max_col + 1):
             for i in range(2, cv_table.max_row + 1):
@@ -339,6 +345,9 @@ def make_cv_table(wb):
                     cell.value = cv[counter]
                     if cell.value == 0:
                         cell.fill = yellow_fill
+                    # No real %CV value
+                    if cell.value == 999:
+                        cell.fill = red_fill
                     counter += 1
 
     # Border
