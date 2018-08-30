@@ -126,6 +126,23 @@ def split_tabs(wb):
             for y in range(1, max_col + 1):
                 cell = sheet.cell(row=row_num, column=y)
                 cell.value = ws.cell(row=x, column=y).value
+                if '<' in str(cell.value) or '>' in str(cell.value):
+                    cell.alignment = Alignment(horizontal='left')
+                if '.' in str(cell.value):
+                    if '<' in str(cell.value):
+                        num = cell.value[2:]
+                        num = float(num)
+                        num = round(num, 2)
+                        cell.value = '< ' + str(num)
+                    elif '>' in str(cell.value):
+                        num = cell.value[2:]
+                        num = float(num)
+                        num = round(num, 2)
+                        cell.value = '> ' + str(num)
+                    else:
+                        cell.value = float(cell.value)
+                        cell.value = round(cell.value, 2)
+                        cell.alignment = Alignment(horizontal='left')
                 if cell.value == 'NaN':
                     cell.font = red_font
 
