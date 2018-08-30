@@ -100,7 +100,12 @@ def split_tabs(wb):
     # Creates raw data sheet
     for i in range(1, max_row + 1):
         for j in range(1, max_col + 1):
-            wb2.worksheets[0].cell(row=i, column=j).value = ws.cell(row=i, column=j).value
+            raw_value = ws.cell(row=i, column=j).value
+            try:
+                raw_value = float(raw_value)
+            except ValueError:
+                pass
+            wb2.worksheets[0].cell(row=i, column=j).value = raw_value
     wb2.worksheets[0].title = 'Raw Data'
 
     # Creates a sheet for every DataType
@@ -125,7 +130,12 @@ def split_tabs(wb):
             row_num += 1
             for y in range(1, max_col + 1):
                 cell = sheet.cell(row=row_num, column=y)
-                cell.value = ws.cell(row=x, column=y).value
+                raw_value = ws.cell(row=x, column=y).value
+                try:
+                    raw_value = float(raw_value)
+                except ValueError:
+                    pass
+                cell.value = raw_value
                 if '<' in str(cell.value) or '>' in str(cell.value):
                     cell.alignment = Alignment(horizontal='left')
                 if '.' in str(cell.value):
