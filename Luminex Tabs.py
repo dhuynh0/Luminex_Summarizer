@@ -101,10 +101,11 @@ def split_tabs(wb):
     for i in range(1, max_row + 1):
         for j in range(1, max_col + 1):
             raw_value = ws.cell(row=i, column=j).value
-            try:
-                raw_value = float(raw_value)
-            except ValueError:
-                pass
+            if raw_value is not None:
+                try:
+                    raw_value = float(raw_value)
+                except ValueError:
+                    pass
             wb2.worksheets[0].cell(row=i, column=j).value = raw_value
     wb2.worksheets[0].title = 'Raw Data'
 
@@ -131,13 +132,12 @@ def split_tabs(wb):
             for y in range(1, max_col + 1):
                 cell = sheet.cell(row=row_num, column=y)
                 raw_value = ws.cell(row=x, column=y).value
-                try:
-                    raw_value = float(raw_value)
-                except ValueError:
-                    pass
+                if raw_value is not None:
+                    try:
+                        raw_value = float(raw_value)
+                    except ValueError:
+                        pass
                 cell.value = raw_value
-                if '<' in str(cell.value) or '>' in str(cell.value):
-                    cell.alignment = Alignment(horizontal='left')
                 if '.' in str(cell.value):
                     if '<' in str(cell.value):
                         num = cell.value[2:]
@@ -152,9 +152,25 @@ def split_tabs(wb):
                     else:
                         cell.value = float(cell.value)
                         cell.value = round(cell.value, 2)
-                        cell.alignment = Alignment(horizontal='left')
-                if cell.value == 'NaN':
+                if cell.value == 'NaN' or cell.value == 'N/A':
                     cell.font = red_font
+
+                # Column formatting
+                title = sheet.title
+                if (title == 'Avg Net MFI' or title == 'Avg Result' or title =='Avg Range' or
+                    title == '%CV Replicates' or title == 'Units' or title == 'Standard Expected Concentration' or
+                    title == 'Control Expected Concentration' or title == 'Control Range - Low' or
+                    title == 'Control Range - High' or title == 'Per Bead Count' or title == 'Analysis Types' or
+                    title == 'Analysis Coefficients' or title == 'R^2' or title == 'Audit Logs'):
+                    if y > 1:
+                        cell.alignment = Alignment(horizontal='right')
+                    else:
+                        cell.alignment = Alignment(horizontal='left')
+                else:
+                    if y > 2:
+                        cell.alignment = Alignment(horizontal='right')
+                    else:
+                        cell.alignment = Alignment(horizontal='left')
 
     # Fills in the last Data type sheet with corresponding data (may be a better way to do this)
     row_num = 0
@@ -166,6 +182,10 @@ def split_tabs(wb):
             cell.value = ws.cell(row=x, column=y).value
             if cell.value == 'NaN':
                 cell.font = red_font
+            if y > 1:
+                cell.alignment = Alignment(horizontal='right')
+            else:
+                cell.alignment = Alignment(horizontal='left')
 
     # Resize columns of all worksheets except Raw Data worksheet
     for sheet in wb2.worksheets:
@@ -266,8 +286,10 @@ def make_cv_table(wb):
 
     # Fills in names
     for i in range(2, len(names) + 1):
-        cv_table.cell(row=i, column=1).value = names[i-2]
-        cv_table.cell(row=i, column=1).font = bold_font
+        cell = cv_table.cell(row=i, column=1)
+        cell.value = names[i-2]
+        cell.font = bold_font
+        cell.alignment = Alignment(horizontal='left')
 
     # Calculates Std Dev and Mean (3 Cases: immediate duplicates, 7-gap duplicates, and no duplicates)
     std_dev = []
