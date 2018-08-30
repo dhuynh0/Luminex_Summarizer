@@ -149,8 +149,7 @@ def split_tabs(wb):
                         num = float(num)
                         num = round(num, 2)
                         cell.value = '> ' + str(num)
-                    else:
-                        cell.value = float(cell.value)
+                    elif isinstance(cell.value, float):
                         cell.value = round(cell.value, 2)
                 if cell.value == 'NaN' or cell.value == 'N/A':
                     cell.font = red_font
